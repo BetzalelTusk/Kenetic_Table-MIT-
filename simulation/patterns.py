@@ -112,6 +112,38 @@ class PatternEngine:
             Z += np.sin((self.X + self.Y) * f * np.pi + ph * 1.3) * 0.5
         return self._normalise(Z)
 
+    def _p_speaking(self, t, p):
+        """
+        Siri-style voice waveform visualisation.
+        A horizontal band of overlapping sine harmonics with amplitude
+        modulated at speech-like cadences (syllable rhythm).
+        The table literally 'speaks'.
+        """
+        center_y = 0.5
+        y_dist = np.abs(self.Y - center_y)
+
+        # ── Multiple frequency harmonics (like an audio spectrum) ──
+        h1 = np.sin(self.X * 10 * np.pi + t * 15)
+        h2 = np.sin(self.X * 14 * np.pi - t * 10) * 0.7
+        h3 = np.sin(self.X *  6 * np.pi + t * 20) * 0.5
+        h4 = np.sin(self.X * 18 * np.pi - t * 12) * 0.3
+        h5 = np.sin(self.X * 22 * np.pi + t *  8) * 0.2
+        combined = h1 + h2 + h3 + h4 + h5
+
+        # ── Speech-like amplitude envelope (syllable rhythm) ──
+        s1 = np.abs(np.sin(t * 4.0))
+        s2 = np.abs(np.sin(t * 2.7 + 0.5))
+        s3 = np.abs(np.sin(t * 6.3 + 1.2))
+        envelope = s1 * 0.5 + s2 * 0.3 + s3 * 0.2
+
+        # ── Gaussian band concentrating energy in the centre ──
+        band_width = 0.12 + 0.08 * envelope
+        band = np.exp(-(y_dist ** 2) / (2 * band_width ** 2))
+
+        # ── Final height map ──
+        Z = combined * band * envelope
+        return self._remap(Z)
+
     # ── Helpers ───────────────────────────────────────────────────────── #
 
     def _remap(self, Z):

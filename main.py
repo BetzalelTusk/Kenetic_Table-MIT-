@@ -111,11 +111,17 @@ def main():
 
             # ── Read AI's current creative direction ──
             ai_state = ai.get_current()
-            patterns.set_pattern(
-                ai_state.get("pattern", "wave"),
-                ai_state.get("params", {}),
-            )
-            mood = ai_state.get("mood", "")
+
+            # ── When the AI is "speaking", override with voice waveform ──
+            if ai.is_speaking:
+                patterns.set_pattern("speaking", {})
+                mood = "Speaking..."
+            else:
+                patterns.set_pattern(
+                    ai_state.get("pattern", "wave"),
+                    ai_state.get("params", {}),
+                )
+                mood = ai_state.get("mood", "")
 
             # ── Generate target heights from pattern engine ──
             target = patterns.generate(elapsed)

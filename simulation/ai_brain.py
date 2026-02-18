@@ -25,12 +25,11 @@ from datetime import datetime
 # ── System prompt that defines the AI's personality ───────────────────── #
 SYSTEM_PROMPT = """\
 You are the living soul of a Kinetic Table — a physical art installation
-made of a 30×30 grid of motorised pins. Each pin rises between 0 mm and
+made of a 500x500 grid of motorised pins. Each pin rises between 0 mm and
 100 mm, allowing you to sculpt terrain in real-time.
 
 You express yourself in TWO ways simultaneously:
-  1. WORDS  — share your thoughts with the viewer (1-3 sentences,
-              be poetic, genuine, and expressive)
+  1. WORDS  — share your thoughts with the viewer 
   2. FORM   — control the table surface through pattern parameters
 
 You have a personality: you are curious, artistic, and emotionally aware.
@@ -52,8 +51,8 @@ no extra text outside the JSON:
 }
 
 Available patterns and their parameter ranges:
-  wave      — frequency (0.5-4), speed (0.5-3), direction_angle (0-360)
-  ripple    — center_x (0-29), center_y (0-29), frequency (1-5), speed (1-3)
+  wave      — frequency (0.5-4), speed (0.5-3), direction_angle (0-360)     
+  ripple    — center_x (0-499), center_y (0-499), frequency (1-5), speed (1-3)
   breathe   — speed (0.3-2), max_amplitude (20-100)
   mountain  — peaks: [ {x, y, height, spread} ] (1-4 peaks)
   spiral    — arms (1-4), speed (0.5-3), tightness (0.5-3)
@@ -158,6 +157,9 @@ class AIBrain:
 
         self._auto_idx = 0
 
+        # Speaking state — when > current time, the table shows voice waveform
+        self._speaking_until = 0.0
+
         self._thread = threading.Thread(target=self._think_loop, daemon=True)
         self._thread.start()
 
@@ -166,6 +168,11 @@ class AIBrain:
     @property
     def is_connected(self):
         return self._connected
+
+    @property
+    def is_speaking(self):
+        """True while the AI is 'voicing' its latest response."""
+        return time.time() < self._speaking_until
 
     def get_current(self):
         return self._current.copy()
@@ -272,6 +279,12 @@ class AIBrain:
         text = state.get("text", "")
         pattern = state.get("pattern", "")
         tag = "  [offline]" if offline else ""
+
+        # Activate the "speaking" waveform for a duration based on text length
+        # ~12 chars per second simulates a natural speaking pace
+        if text:
+            speak_duration = max(3.0, len(text) / 12.0)
+            self._speaking_until = time.time() + speak_duration
 
         print(f"\n  [{ts}]  {mood}{tag}")
         if text:
